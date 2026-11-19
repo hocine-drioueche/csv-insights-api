@@ -73,3 +73,23 @@ def get_analysis(
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     return analysis
+
+@router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_analysis(
+    analysis_id: int,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    analysis = db.get(AnalysisDB, analysis_id)
+
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    if analysis.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own analyses",
+        )
+
+    db.delete(analysis)
+    db.commit()
