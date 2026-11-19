@@ -1,11 +1,12 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks,Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_session
 from app.models import AnalysisDB, UserDB
 from app.schemas import AnalysisListItem
+from app.processing import process_analysis
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/analyses", tags=["analyses"])
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def upload_analysis(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_session),
@@ -44,5 +46,7 @@ async def upload_analysis(
     db.add(analysis)
     db.commit()
     db.refresh(analysis)
+
+    background_tasks.add_task(process_analysis, analysis.id, content)
 
     return analysis
