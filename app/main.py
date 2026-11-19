@@ -4,6 +4,7 @@ from app.database import Base, SessionLocal, engine
 from app.models import UserDB
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
+from app.routers.analyses import router as analyses_router
 
 app = FastAPI(title="CSV Insights API")
 
@@ -24,6 +25,7 @@ seed_data()
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(analyses_router)
 
 
 @app.get("/health")
