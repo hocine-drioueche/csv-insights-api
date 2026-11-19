@@ -7,6 +7,7 @@ from app.dependencies import get_current_user, get_session
 from app.models import AnalysisDB, UserDB
 from app.schemas import AnalysisListItem
 from app.processing import process_analysis
+from app.schemas import AnalysisDetail, AnalysisListItem
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -48,5 +49,27 @@ async def upload_analysis(
     db.refresh(analysis)
 
     background_tasks.add_task(process_analysis, analysis.id, content)
+
+    return analysis
+
+
+@router.get("", response_model=list[AnalysisListItem])
+def list_analyses(
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    return db.query(AnalysisDB).order_by(AnalysisDB.id).all()
+
+
+@router.get("/{analysis_id}", response_model=AnalysisDetail)
+def get_analysis(
+    analysis_id: int,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    analysis = db.get(AnalysisDB, analysis_id)
+
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
 
     return analysis
