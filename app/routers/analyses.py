@@ -1,13 +1,14 @@
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks,Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_session
 from app.models import AnalysisDB, UserDB
 from app.schemas import AnalysisListItem
 from app.processing import process_analysis
-from app.schemas import AnalysisDetail, AnalysisListItem
+from app.schemas import AnalysisDetail, AnalysisListItem, AnalysisStats
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -59,6 +60,23 @@ def list_analyses(
     db: Session = Depends(get_session),
 ):
     return db.query(AnalysisDB).order_by(AnalysisDB.id).all()
+
+
+@router.get("/stats/summary", response_model=AnalysisStats)
+def get_stats_summary(
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    total_files, total_rows = db.query(
+        func.count(AnalysisDB.id),
+        func.coalesce(func.sum(AnalysisDB.rows_count), 0),
+    ).one()
+
+    return AnalysisStats(
+        total_files=total_files,
+        total_rows_processed=total_rows,
+    )
+
 
 
 @router.get("/{analysis_id}", response_model=AnalysisDetail)
